@@ -6,3 +6,4 @@ streamlit==1.51.0
 tensorflow==2.20.0
 uvicorn==0.38.0
 scikit-learn
+matplotlib==3.9.2
