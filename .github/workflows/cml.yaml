@@ -22,3 +22,11 @@ jobs:
           echo "## Model Metrics" > report.md
           cat metrics.txt >> report.md
           cml-send-comment report.md
+
+          # --- commit automático del gráfico y métricas ---
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "github-actions"
+          git add models/metrics_by_category.png
+          git add models/metrics.txt
+          git commit -m "Add metrics_by_category.png and metrics.txt from latest training"
+          git push
