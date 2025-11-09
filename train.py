@@ -14,9 +14,10 @@ from sklearn.metrics import (
     mean_squared_error,
     confusion_matrix
 )
+from sklearn.utils.multiclass import unique_labels
 from pathlib import Path
 import matplotlib
-matplotlib.use("Agg")  # para que funcione sin entorno gráfico
+matplotlib.use("Agg")  # para entornos sin interfaz gráfica
 import matplotlib.pyplot as plt
 import re
 import pickle
@@ -55,9 +56,11 @@ model.add(Dense(len(df['NPS_encoded'].unique()), activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 print(model.summary())
 
-# --- División de datos ---
+# --- División de datos (estratificada) ---
 y = pd.get_dummies(df['NPS_encoded']).values
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1901)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=1901, stratify=y
+)
 print(X_train.shape, y_train.shape)
 print(X_test.shape, y_test.shape)
 
@@ -117,12 +120,15 @@ print("\nEvaluation results:\n", metrics_output)
 with open(OUT_DIR / 'metrics.txt', 'w', encoding='utf-8') as outfile:
     outfile.write(metrics_output)
 
-# --- Gráfico: Efectividad por categoría ---
+# --- Gráfico: Efectividad del modelo por categoría (robusto) ---
 class_report_dict = classification_report(
     y_test_labels, y_preds_labels, target_names=label_names, output_dict=True, zero_division=0
 )
 
-labels = list(class_report_dict.keys())[:-3]  # Excluir accuracy y promedios
+# Detectar solo clases presentes en test/pred
+present_labels_idx = unique_labels(y_test_labels, y_preds_labels)
+labels = [label_names[i] for i in present_labels_idx]
+
 f1_scores = [class_report_dict[l]['f1-score'] for l in labels]
 precisions = [class_report_dict[l]['precision'] for l in labels]
 recalls = [class_report_dict[l]['recall'] for l in labels]
@@ -148,3 +154,4 @@ plt.close()
 
 print(f"[OK] Gráfico guardado en: {plot_path}")
 print(f"[EXISTS] {plot_path.exists()}")
+
