@@ -1,5 +1,6 @@
-name: model-training
+name: model-training 
 on: [push]
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -10,7 +11,6 @@ jobs:
 
       - uses: actions/setup-python@v4
       - uses: iterative/setup-cml@v1
-        # test -f data/base_encuestados_v2.csv || { echo "::error file=data/data.csv::Missing data/base_encuestados_v2.csv"; exit 1; }
 
       - name: Train model
         env:
@@ -20,11 +20,23 @@ jobs:
           python train.py
 
           echo "## Model Metrics" > report.md
-          cat metrics.txt >> report.md
+          cat models/metrics.txt >> report.md
           cml-send-comment report.md
 
-          # --- commit automático del gráfico y métricas ---
+          # --- ✅ NUEVO: commit automático del gráfico y métricas solo si hay cambios ---
           git config --local user.email "github-actions@github.com"
+          git config --local user.name "github-actions"
+          
+          git add models/metrics_by_category.png models/metrics.txt || true
+
+          # Evitar error si no hay cambios
+          if ! git diff --cached --quiet; then
+            git commit -m "Update metrics_by_category.png and metrics.txt from latest training"
+            git push
+          else
+            echo "No hay cambios nuevos para commitear. Continuando..."
+          fi
+
           git config --local user.name "github-actions"
           git add models/metrics_by_category.png
           git add models/metrics.txt
