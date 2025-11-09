@@ -29,10 +29,13 @@ OUT_DIR = ROOT / "models"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Cargar y limpiar datos ---
-df = pd.read_csv(DATA_PATH).head(1000)
+df = pd.read_csv(DATA_PATH)
 df = df[['Comentarios', 'NPS']].dropna().copy()
 df['Comentarios'] = df['Comentarios'].apply(lambda x: x.lower())
 df['Comentarios'] = df['Comentarios'].apply(lambda x: re.sub(r'[^a-zA-Z0-9\s]', '', x))
+
+# --- Balancear las clases (importante) ---
+df = df.groupby('NPS', group_keys=False).apply(lambda x: x.sample(n=min(len(x), 500), random_state=42))
 
 # --- Codificar etiquetas ---
 le = LabelEncoder()
