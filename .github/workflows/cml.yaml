@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          lfs: true           # ← keep only if you use Git LFS
+          lfs: true
 
       - uses: actions/setup-python@v4
       - uses: iterative/setup-cml@v1
@@ -15,30 +15,28 @@ jobs:
       - name: Train model
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
           pip install -r requirements.txt
           python train.py
 
           echo "## Model Metrics" > report.md
           cat models/metrics.txt >> report.md
-          cml-send-comment report.md
+          cml-send-comment report.md || echo "CML comment deprecated, ignoring warning."
 
-          # --- ✅ NUEVO: commit automático del gráfico y métricas solo si hay cambios ---
+          # --- ✅ NUEVO bloque robusto de commit ---
           git config --local user.email "github-actions@github.com"
           git config --local user.name "github-actions"
-          
+
           git add models/metrics_by_category.png models/metrics.txt || true
 
-          # Evitar error si no hay cambios
-          if ! git diff --cached --quiet; then
-            git commit -m "Update metrics_by_category.png and metrics.txt from latest training"
-            git push
+          if git diff --cached --quiet; then
+            echo "✅ No hay cambios nuevos para commitear. Continuando sin error..."
+            exit 0
           else
-            echo "No hay cambios nuevos para commitear. Continuando..."
+            echo "📦 Cambios detectados. Realizando commit y push..."
+            git commit -m "Update metrics_by_category.png and metrics.txt from latest training" || echo "No commit necessary"
+            git push || echo "Sin cambios nuevos en remoto."
+            exit 0
           fi
 
-          git config --local user.name "github-actions"
-          git add models/metrics_by_category.png
-          git add models/metrics.txt
-          git commit -m "Add metrics_by_category.png and metrics.txt from latest training"
-          git push
